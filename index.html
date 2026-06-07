@@ -1,0 +1,847 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-fullscreen" />
+  <title>Grimace Shake · Le 119</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:ital,wght@0,800;1,400&family=DM+Sans:wght@400;500&display=swap" rel="stylesheet" />
+  <style>
+    /* ── Reset & base ── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --rouge:  #DA291C;
+      --jaune:  #FFC72C;
+      --noir:   #0a0a0a;
+      --gris:   #888;
+      --violet: #9B59B6;
+      --blanc:  #FFFFFF;
+    }
+
+    html, body {
+      width: 100%; height: 100%;
+      background: var(--noir);
+      color: var(--blanc);
+      font-family: 'DM Sans', sans-serif;
+      overflow: hidden;
+      touch-action: manipulation;
+      -webkit-tap-highlight-color: transparent;
+      padding: env(safe-area-inset-top) env(safe-area-inset-right)
+               env(safe-area-inset-bottom) env(safe-area-inset-left);
+    }
+
+    /* ── Écrans ── */
+    .screen {
+      position: fixed; inset: 0;
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      transition: opacity 0.3s ease;
+    }
+    .screen.hidden { opacity: 0; pointer-events: none; }
+
+    /* ── ÉCRAN 1 : Accueil ── */
+    #screen-home { background: var(--noir); gap: 18px; padding: 32px 24px; }
+    #home-logo   { height: 80px; object-fit: contain; margin-bottom: 4px; }
+    #home-title  {
+      font-family: 'Poppins', sans-serif; font-weight: 800;
+      font-size: 32px; color: var(--blanc); text-align: center; line-height: 1.1;
+    }
+    #home-subtitle {
+      font-family: 'Poppins', sans-serif; font-style: italic;
+      font-size: 16px; color: var(--jaune); text-align: center;
+    }
+    .home-feature-list {
+      display: flex; flex-direction: column; gap: 8px; align-items: center; margin-top: 4px;
+    }
+    .home-feature {
+      font-size: 13px; color: rgba(255,255,255,0.55);
+      background: rgba(255,255,255,0.07);
+      border-radius: 20px; padding: 5px 14px;
+    }
+    #btn-start {
+      margin-top: 8px;
+      background: var(--rouge); color: var(--blanc);
+      font-family: 'Poppins', sans-serif; font-weight: 800; font-size: 18px;
+      border: none; border-radius: 8px; min-height: 52px; padding: 0 32px;
+      cursor: pointer; letter-spacing: 0.3px;
+      box-shadow: 0 4px 20px rgba(218,41,28,0.4);
+      transition: transform 0.1s, box-shadow 0.1s;
+    }
+    #btn-start:active { transform: scale(0.97); box-shadow: 0 2px 10px rgba(218,41,28,0.4); }
+    #home-hint {
+      position: fixed; bottom: 24px;
+      font-size: 12px; color: var(--gris);
+      text-align: center; padding: 0 16px; line-height: 1.5;
+    }
+
+    /* ── Loader assets ── */
+    #screen-loader { background: var(--noir); gap: 20px; text-align: center; }
+    #loader-text { font-family: 'Poppins', sans-serif; font-size: 16px; color: var(--blanc); }
+    #loader-bar-wrap {
+      width: 200px; height: 6px;
+      background: #333; border-radius: 3px; overflow: hidden;
+    }
+    #loader-bar {
+      height: 100%; background: var(--jaune);
+      border-radius: 3px; width: 0%; transition: width 0.3s ease;
+    }
+
+    /* ── Erreur caméra ── */
+    #screen-error { background: var(--noir); gap: 16px; padding: 32px 24px; text-align: center; }
+    #error-icon  { font-size: 48px; }
+    #error-msg   {
+      font-family: 'DM Sans', sans-serif; font-size: 15px;
+      color: #ccc; line-height: 1.6; max-width: 280px;
+    }
+    #btn-retry {
+      background: var(--rouge); color: var(--blanc);
+      font-family: 'Poppins', sans-serif; font-weight: 800; font-size: 16px;
+      border: none; border-radius: 8px; min-height: 48px; padding: 0 28px; cursor: pointer;
+    }
+
+    /* ── ÉCRAN 2 : AR ── */
+    #screen-ar { background: #000; justify-content: flex-start; }
+    #video {
+      position: absolute; inset: 0; width: 100%; height: 100%;
+      object-fit: cover;
+      transform: scaleX(-1); /* miroir selfie */
+    }
+    #canvas-ar {
+      position: absolute; inset: 0; width: 100%; height: 100%;
+      pointer-events: none;
+    }
+    #ar-hint {
+      position: absolute; bottom: 80px;
+      left: 50%; transform: translateX(-50%);
+      font-family: 'Poppins', sans-serif; font-size: 12px; color: var(--blanc);
+      background: rgba(0,0,0,0.55);
+      padding: 7px 14px; border-radius: 20px;
+      white-space: nowrap; pointer-events: none; z-index: 10;
+    }
+    #ar-logo {
+      position: absolute; bottom: 16px; left: 16px;
+      height: 40px; object-fit: contain; z-index: 10; opacity: 0.9;
+    }
+    #btn-capture {
+      position: absolute; bottom: 16px; right: 16px;
+      width: 56px; height: 56px; border-radius: 50%;
+      background: var(--rouge); border: 3px solid var(--blanc);
+      font-size: 22px; cursor: pointer; z-index: 10;
+      display: flex; align-items: center; justify-content: center;
+      box-shadow: 0 2px 12px rgba(0,0,0,0.5); transition: transform 0.1s;
+    }
+    #btn-capture:active { transform: scale(0.93); }
+    #btn-mute {
+      position: absolute;
+      top: max(16px, env(safe-area-inset-top)); right: 16px;
+      width: 44px; height: 44px; border-radius: 50%;
+      background: rgba(0,0,0,0.5); border: none;
+      font-size: 20px; cursor: pointer; z-index: 10;
+      display: flex; align-items: center; justify-content: center;
+    }
+    /* Indicateur doigt levé (coin haut gauche) */
+    #ronald-indicator {
+      position: absolute;
+      top: max(16px, env(safe-area-inset-top)); left: 16px;
+      font-family: 'Poppins', sans-serif; font-size: 11px;
+      color: rgba(255,255,255,0.7);
+      background: rgba(0,0,0,0.45);
+      padding: 6px 12px; border-radius: 14px;
+      z-index: 10; pointer-events: none;
+      transition: opacity 0.3s;
+    }
+    #ronald-indicator.active { color: var(--jaune); }
+    /* Flash violet */
+    #flash {
+      position: absolute; inset: 0;
+      background: var(--violet); opacity: 0;
+      pointer-events: none; z-index: 5;
+    }
+    /* Overlay partage */
+    #share-overlay {
+      position: absolute; inset: 0;
+      background: rgba(0,0,0,0.7);
+      display: flex; align-items: center; justify-content: center;
+      z-index: 20; opacity: 0; pointer-events: none; transition: opacity 0.25s;
+    }
+    #share-overlay.visible { opacity: 1; pointer-events: auto; }
+    #share-bubble {
+      background: var(--violet); color: var(--blanc);
+      font-family: 'Poppins', sans-serif; font-weight: 800; font-size: 18px;
+      padding: 20px 28px; border-radius: 16px; text-align: center;
+      box-shadow: 0 8px 32px rgba(155,89,182,0.6);
+      max-width: 280px; line-height: 1.4;
+    }
+  </style>
+</head>
+<body>
+
+<!-- ═══════════════════════════════════════
+     ÉCRAN LOADER
+═══════════════════════════════════════ -->
+<div class="screen" id="screen-loader">
+  <div id="loader-text">Chargement… 🟣</div>
+  <div id="loader-bar-wrap"><div id="loader-bar"></div></div>
+</div>
+
+<!-- ═══════════════════════════════════════
+     ÉCRAN ACCUEIL
+═══════════════════════════════════════ -->
+<div class="screen hidden" id="screen-home">
+  <img id="home-logo" src="https://monsitedemo.website/wp-content/uploads/2026/05/Logo_McDo.png" alt="McDonald's" />
+  <div id="home-title">Grimace Shake</div>
+  <div id="home-subtitle">au 119 · Saint-Lazare</div>
+  <div class="home-feature-list">
+    <span class="home-feature">👄 Ouvre la bouche → Grimace boit</span>
+    <span class="home-feature">☝️ Lève le doigt → Ronald débarque</span>
+  </div>
+  <button id="btn-start">Lancer l'expérience 🟣</button>
+  <p id="home-hint">Autorise la caméra quand demandé</p>
+</div>
+
+<!-- ═══════════════════════════════════════
+     ÉCRAN ERREUR
+═══════════════════════════════════════ -->
+<div class="screen hidden" id="screen-error">
+  <div id="error-icon">📵</div>
+  <p id="error-msg">Caméra non disponible.<br>Vérifie que tu es sur Safari ou Chrome et que tu as autorisé l'accès.</p>
+  <button id="btn-retry">Réessayer</button>
+</div>
+
+<!-- ═══════════════════════════════════════
+     ÉCRAN AR
+═══════════════════════════════════════ -->
+<div class="screen hidden" id="screen-ar">
+  <video id="video" autoplay playsinline muted></video>
+  <canvas id="canvas-ar"></canvas>
+  <div id="flash"></div>
+
+  <div id="ar-hint">👄 Ouvre la bouche &nbsp;·&nbsp; ☝️ Lève le doigt</div>
+  <div id="ronald-indicator">☝️ Ronald</div>
+  <img id="ar-logo" src="https://monsitedemo.website/wp-content/uploads/2026/05/Logo_McDo.png" alt="McDonald's" />
+  <button id="btn-capture">📸</button>
+  <button id="btn-mute">🔊</button>
+
+  <div id="share-overlay">
+    <div id="share-bubble">Partagez avec<br>#GrimaceShake119 🟣</div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════
+     MediaPipe CDN (Face Mesh + Hands)
+═══════════════════════════════════════ -->
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/face_mesh.js" crossorigin="anonymous"></script>
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js" crossorigin="anonymous"></script>
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
+
+<script type="module">
+/* ════════════════════════════════════════════════════════════════
+   GRIMACE SHAKE AU 119 — WebAR Face Mesh + Hand Tracking
+   McDonald's Le 119 Saint-Lazare, Paris
+   Compatible Safari iOS 15+ & Chrome Android 90+
+   ════════════════════════════════════════════════════════════════ */
+
+// ══════════════════════════════════════════════════════
+// CONSTANTES AJUSTABLES
+// ══════════════════════════════════════════════════════
+
+// Bouche : ratio distance-lèvres / distance-pupilles.
+// Augmenter (→ 0.11) = plus difficile à déclencher.
+// Diminuer (→ 0.05) = plus sensible.
+const SENSITIVITY       = 0.08;
+const SENSITIVITY_RESET = 0.04;
+const TRIGGER_COOLDOWN  = 800;  // ms entre deux déclenchements
+
+// Doigt levé : écart vertical normalisé [0-1] entre la pointe
+// du doigt (landmark 8) et le poignet (landmark 0).
+// 0 = haut de l'image. Augmenter = geste plus franc requis.
+const FINGER_RAISE_THRESHOLD = 0.28;
+
+// Taille des personnages = faceH * ce ratio.
+// faceH est la hauteur du visage détecté en pixels.
+// 1.7 = personnage 70% plus grand que le visage.
+const CHAR_FACE_RATIO = 1.7;
+
+// faceH est clamped dans [FACE_H_MIN, FACE_H_MAX] pixels
+// pour éviter des personnages trop petits ou trop grands.
+const FACE_H_MIN = 80;
+const FACE_H_MAX = 240;
+
+// ══════════════════════════════════════════════════════
+// DOM
+// ══════════════════════════════════════════════════════
+const screens = {
+  loader : document.getElementById('screen-loader'),
+  home   : document.getElementById('screen-home'),
+  error  : document.getElementById('screen-error'),
+  ar     : document.getElementById('screen-ar'),
+};
+const loaderBar       = document.getElementById('loader-bar');
+const video           = document.getElementById('video');
+const canvas          = document.getElementById('canvas-ar');
+const ctx             = canvas.getContext('2d');
+const flashEl         = document.getElementById('flash');
+const shareOverlay    = document.getElementById('share-overlay');
+const ronaldIndicator = document.getElementById('ronald-indicator');
+const btnStart        = document.getElementById('btn-start');
+const btnRetry        = document.getElementById('btn-retry');
+const btnCapture      = document.getElementById('btn-capture');
+const btnMute         = document.getElementById('btn-mute');
+
+// ══════════════════════════════════════════════════════
+// ÉTAT
+// ══════════════════════════════════════════════════════
+
+// Assets
+let grimace1 = null, grimace2 = null, ronaldImg = null, logoImg = null;
+let assetsReady = false;
+
+// Face tracking
+let faceDetected  = false;
+let currentFaceH  = 140;  // hauteur visage en px (mise à jour en temps réel)
+
+// Grimace
+let grimaceState  = 1;        // 1 = neutre, 2 = grimace
+let animStartTime = null;
+const ANIM_DURATION = 2500;   // ms
+
+// Position Grimace (interpolée côté DROIT de l'écran)
+let targetGX = null, targetGY = null;
+
+// Mouth trigger
+let isTriggered  = false;
+let lastTriggerAt = 0;
+
+// Texte flottant
+let textVisible    = false;
+let textStartTime  = null;
+const TEXT_APPEAR  = 300;   // ms avant apparition du texte
+const TEXT_FADE    = 2200;  // ms : début du fondu
+const TEXT_GONE    = 2500;  // ms : texte effacé
+
+// Tête (pour ancrage du texte)
+let headX = -1, headY = -1;
+
+// Ronald
+let fingerRaised  = false;
+let targetRX      = null;   // null = non initialisé
+let targetRY      = null;
+let handsReady    = false;
+let frameCounter  = 0;
+
+// Audio
+let isMuted  = false;
+let audioCtx = null;
+
+// RAF
+let rafId = null;
+
+// ══════════════════════════════════════════════════════
+// UTILITAIRES
+// ══════════════════════════════════════════════════════
+
+function showScreen(name) {
+  Object.entries(screens).forEach(([k, el]) =>
+    el.classList.toggle('hidden', k !== name)
+  );
+}
+
+function loadImage(url) {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.crossOrigin = 'anonymous';
+    img.onload  = () => resolve(img);
+    img.onerror = () => reject(new Error(`Échec chargement : ${url}`));
+    img.src = url;
+  });
+}
+
+// Flash violet au déclenchement du mouth trigger
+function doFlash() {
+  flashEl.style.transition = 'none';
+  flashEl.style.opacity    = '0';
+  requestAnimationFrame(() => {
+    flashEl.style.transition = 'opacity 250ms ease-out';
+    flashEl.style.opacity    = '0.3';
+    setTimeout(() => {
+      flashEl.style.transition = 'opacity 250ms ease-in';
+      flashEl.style.opacity    = '0';
+    }, 250);
+  });
+}
+
+// ══════════════════════════════════════════════════════
+// WEB AUDIO — son "slurp" procédural (aucun fichier externe)
+// ══════════════════════════════════════════════════════
+
+function initAudio() {
+  if (audioCtx) return;
+  audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+}
+
+function playSlurp() {
+  if (isMuted || !audioCtx) return;
+  try {
+    const t   = audioCtx.currentTime;
+    const buf = audioCtx.createBuffer(1, audioCtx.sampleRate * 0.6, audioCtx.sampleRate);
+    const d   = buf.getChannelData(0);
+    for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
+
+    const src    = audioCtx.createBufferSource();
+    src.buffer   = buf;
+
+    const filter = audioCtx.createBiquadFilter();
+    filter.type  = 'lowpass';
+    filter.frequency.setValueAtTime(400, t);
+    filter.frequency.exponentialRampToValueAtTime(1200, t + 0.3);
+    filter.Q.value = 8;
+
+    const gain = audioCtx.createGain();
+    gain.gain.setValueAtTime(0, t);
+    gain.gain.linearRampToValueAtTime(0.4, t + 0.1);
+    gain.gain.exponentialRampToValueAtTime(0.001, t + 0.6);
+
+    src.connect(filter); filter.connect(gain); gain.connect(audioCtx.destination);
+    src.start(t); src.stop(t + 0.6);
+  } catch (e) { console.warn('[Audio] Slurp impossible :', e); }
+}
+
+// ══════════════════════════════════════════════════════
+// CHARGEMENT ASSETS (4 images)
+// ══════════════════════════════════════════════════════
+
+async function loadAssets() {
+  console.log('[Assets] Chargement de 4 images…');
+  const URLS = [
+    'https://monsitedemo.website/wp-content/uploads/2026/06/Grimace-Shake-au-119_11.png',
+    'https://monsitedemo.website/wp-content/uploads/2026/06/Grimace-Shake-au-119_22.png',
+    'https://monsitedemo.website/wp-content/uploads/2026/06/ronald_se_moque_rigole.png',
+    'https://monsitedemo.website/wp-content/uploads/2026/05/Logo_McDo.png',
+  ];
+
+  let loaded = 0;
+  const promises = URLS.map(url =>
+    loadImage(url).then(img => {
+      loaded++;
+      loaderBar.style.width = `${Math.round(loaded / URLS.length * 100)}%`;
+      return img;
+    })
+  );
+
+  try {
+    const [g1, g2, ron, logo] = await Promise.all(promises);
+    grimace1  = g1;
+    grimace2  = g2;
+    ronaldImg = ron;
+    logoImg   = logo;
+    console.log('[Assets] OK — grimace1, grimace2, ronald, logo chargés');
+  } catch (err) {
+    console.error('[Assets] Erreur (on continue) :', err.message);
+  }
+  assetsReady = true;
+}
+
+// ══════════════════════════════════════════════════════
+// DÉMARRAGE AR
+// ══════════════════════════════════════════════════════
+
+async function startAR() {
+  initAudio();
+  showScreen('ar');
+
+  // Canvas : se redimensionne sur resize
+  const resizeCanvas = () => {
+    canvas.width  = canvas.offsetWidth;
+    canvas.height = canvas.offsetHeight;
+  };
+  resizeCanvas();
+  window.addEventListener('resize', resizeCanvas);
+
+  // Caméra
+  let stream;
+  try {
+    stream = await navigator.mediaDevices.getUserMedia({
+      video: { facingMode: 'user', width: { ideal: 1280 }, height: { ideal: 720 } },
+      audio: false,
+    });
+    console.log('[Caméra] Flux obtenu');
+  } catch (err) {
+    console.error('[Caméra] Refus :', err.message);
+    showErrorScreen(err);
+    return;
+  }
+
+  video.srcObject = stream;
+  await video.play();
+
+  // ── MediaPipe FaceMesh ──
+  const faceMesh = new window.FaceMesh({
+    locateFile: f => `https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/${f}`,
+  });
+  faceMesh.setOptions({
+    maxNumFaces           : 1,
+    refineLandmarks       : true,
+    minDetectionConfidence: 0.7,
+    minTrackingConfidence : 0.5,
+  });
+  faceMesh.onResults(onFaceResults);
+
+  // ── MediaPipe Hands (lite, chargé en arrière-plan) ──
+  const handsModel = new window.Hands({
+    locateFile: f => `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${f}`,
+  });
+  handsModel.setOptions({
+    maxNumHands           : 1,
+    modelComplexity       : 0,   // lite pour la perf mobile
+    minDetectionConfidence: 0.7,
+    minTrackingConfidence : 0.5,
+  });
+  handsModel.onResults(onHandResults);
+
+  // Pré-initialise Hands sans bloquer (prêt après qques secondes)
+  handsModel.initialize().then(() => {
+    handsReady = true;
+    console.log('[Hands] Modèle prêt');
+  }).catch(e => console.warn('[Hands] Init partielle :', e));
+
+  // ── Boucle RAF manuelle ──
+  // FaceMesh : chaque frame. Hands : toutes les 3 frames (perf mobile).
+  async function loop() {
+    if (video.readyState >= 2) {
+      frameCounter++;
+      await faceMesh.send({ image: video });
+      if (handsReady && frameCounter % 3 === 0) {
+        try { await handsModel.send({ image: video }); }
+        catch(e) { /* Hands pas encore prêt */ }
+      }
+    }
+    rafId = requestAnimationFrame(loop);
+  }
+  rafId = requestAnimationFrame(loop);
+  console.log('[AR] Boucle démarrée');
+}
+
+// ══════════════════════════════════════════════════════
+// CALLBACKS MEDIAPIPE
+// ══════════════════════════════════════════════════════
+
+// Lerp helper
+function lerp(a, b, t) { return a + (b - a) * t; }
+
+function onFaceResults(results) {
+  const W = canvas.width;
+  const H = canvas.height;
+  ctx.clearRect(0, 0, W, H);
+
+  if (!results.multiFaceLandmarks?.length) {
+    if (faceDetected) console.log('[Visage] Perdu');
+    faceDetected = false;
+    // Personnages sortent de l'écran
+    if (targetGX !== null) targetGX = lerp(targetGX, W + 300, 0.10);
+    if (targetRX !== null) targetRX = lerp(targetRX, -400,    0.10);
+    drawCharacters(W, H, performance.now());
+    return;
+  }
+
+  if (!faceDetected) console.log('[Visage] Détecté');
+  faceDetected = true;
+
+  const lm  = results.multiFaceLandmarks[0];
+  const now = performance.now();
+
+  // ── Taille du visage pour proportionnement ──
+  // Hauteur = distance forehead (10) → menton (152), en pixels
+  const rawFaceH = Math.abs(lm[152].y * H - lm[10].y * H);
+  currentFaceH   = Math.max(FACE_H_MIN, Math.min(FACE_H_MAX, rawFaceH));
+
+  // ── Ratio bouche ──
+  const mouthOpen = Math.abs(lm[14].y - lm[13].y) * H;
+  const pupilDist = Math.abs(lm[263].x - lm[33].x) * W;
+  const ratio     = pupilDist > 0 ? mouthOpen / pupilDist : 0;
+
+  if (!isTriggered && ratio > SENSITIVITY && now - lastTriggerAt > TRIGGER_COOLDOWN) {
+    triggerAnimation(now);
+  }
+
+  // ── Positionnement Grimace (côté DROIT en vue miroir) ──
+  // lm[127] = joue gauche dans l'image → droite dans le miroir.
+  // (1 - x) convertit coordonnées MediaPipe → écran miroir.
+  const rTemple = lm[127];
+  const charH   = currentFaceH * CHAR_FACE_RATIO;
+  const gImg    = grimaceState === 2 ? grimace2 : grimace1;
+  const gW      = gImg ? charH * (gImg.width / gImg.height) : charH * 0.7;
+
+  // Bord gauche de Grimace = bord droit du visage + un peu d'espace
+  const newGX = (1 - rTemple.x) * W - gW * 0.15;
+  // Ancre verticale : top du personnage aligné sur sommet du crâne (légèrement au-dessus)
+  const newGY = lm[10].y * H - charH * 0.10;
+
+  if (targetGX === null) { targetGX = newGX; targetGY = newGY; }
+  targetGX = lerp(targetGX, newGX, 0.14);
+  targetGY = lerp(targetGY, newGY, 0.14);
+
+  // ── Positionnement Ronald (côté GAUCHE en vue miroir) ──
+  // lm[356] = joue droite dans l'image → gauche dans le miroir.
+  const lTemple = lm[356];
+  const ronW    = ronaldImg ? charH * (ronaldImg.width / ronaldImg.height) : charH * 0.7;
+  const onScreenRX = (1 - lTemple.x) * W - ronW + ronW * 0.15;
+  const onScreenRY = lm[10].y * H - charH * 0.10;
+  const offScreenRX = -ronW - 40;
+
+  if (targetRX === null) { targetRX = offScreenRX; targetRY = onScreenRY; }
+
+  if (fingerRaised) {
+    targetRX = lerp(targetRX, onScreenRX, 0.14);
+    targetRY = lerp(targetRY, onScreenRY, 0.14);
+  } else {
+    targetRX = lerp(targetRX, offScreenRX, 0.14);
+  }
+
+  // Position tête pour le texte (sommet crâne, miroir)
+  headX = (1 - lm[10].x) * W;
+  headY = lm[10].y * H;
+
+  // ── Dessin ──
+  drawCharacters(W, H, now);
+  if (textVisible) drawText(W, H, now);
+}
+
+// Détection doigt levé : index tip (8) significativement au-dessus du poignet (0)
+function onHandResults(results) {
+  if (!results.multiHandLandmarks?.length) {
+    if (fingerRaised) console.log('[Hand] Doigt abaissé');
+    fingerRaised = false;
+    ronaldIndicator.classList.remove('active');
+    return;
+  }
+
+  const lm    = results.multiHandLandmarks[0];
+  const tip   = lm[8];   // bout de l'index
+  const mcp   = lm[5];   // articulation index (knuckle)
+  const wrist = lm[0];   // poignet
+
+  // Doigt levé = tip nettement au-dessus du poignet ET au-dessus du knuckle
+  // En coordonnées normalisées : y plus petit = plus haut dans l'image
+  const raisedEnough = (wrist.y - tip.y) > FINGER_RAISE_THRESHOLD;
+  const extendedUp   = tip.y < mcp.y - 0.05;
+
+  const newState = raisedEnough && extendedUp;
+  if (newState !== fingerRaised) {
+    fingerRaised = newState;
+    ronaldIndicator.classList.toggle('active', fingerRaised);
+    console.log('[Hand]', fingerRaised ? '☝️ Doigt levé → Ronald slide in' : 'Doigt abaissé → Ronald sort');
+  }
+}
+
+// ══════════════════════════════════════════════════════
+// ANIMATION MOUTH TRIGGER
+// ══════════════════════════════════════════════════════
+
+function triggerAnimation(now) {
+  isTriggered   = true;
+  lastTriggerAt = now;
+  animStartTime = now;
+  grimaceState  = 2;
+  console.log('[Mouth] Déclenchement :', Math.round(now), 'ms');
+
+  doFlash();
+  playSlurp();
+
+  setTimeout(() => {
+    textVisible   = true;
+    textStartTime = performance.now();
+  }, TEXT_APPEAR);
+
+  setTimeout(() => {
+    grimaceState = 1;
+    isTriggered  = false;
+  }, ANIM_DURATION);
+
+  setTimeout(() => { textVisible = false; }, ANIM_DURATION);
+}
+
+// ══════════════════════════════════════════════════════
+// DESSIN DES PERSONNAGES
+// ══════════════════════════════════════════════════════
+
+function drawCharacters(W, H, now) {
+  if (targetGX === null) return;
+
+  const charH  = currentFaceH * CHAR_FACE_RATIO;
+  const idleG  = Math.sin((now / 1000) * Math.PI) * 7;          // oscillation Grimace
+  const idleR  = Math.sin((now / 1000) * Math.PI + 1.2) * 7;    // oscillation Ronald (déphasé)
+
+  // ── Grimace ──
+  const gImg = grimaceState === 2 && assetsReady ? grimace2 : grimace1;
+  if (gImg && targetGX > -gImg.width * 1.5) {
+    const gW = charH * (gImg.width / gImg.height);
+
+    // Scale "choc" : 0–200ms montée, 200–400ms descente
+    let scale = 1.0;
+    if (grimaceState === 2 && animStartTime !== null) {
+      const e = now - animStartTime;
+      if      (e < 200) scale = 1.0 + 0.15 * (e / 200);
+      else if (e < 400) scale = 1.15 - 0.15 * ((e - 200) / 200);
+    }
+
+    ctx.save();
+    ctx.translate(targetGX + gW / 2, targetGY + charH / 2 + idleG);
+    ctx.scale(scale, scale);
+    ctx.drawImage(gImg, -gW / 2, -charH / 2, gW, charH);
+    ctx.restore();
+  }
+
+  // ── Ronald ──
+  if (ronaldImg && targetRX !== null && targetRX > -(ronaldImg.width * CHAR_FACE_RATIO * 2)) {
+    const rW = charH * (ronaldImg.width / ronaldImg.height);
+    ctx.save();
+    ctx.translate(targetRX + rW / 2, targetRY + charH / 2 + idleR);
+    ctx.drawImage(ronaldImg, -rW / 2, -charH / 2, rW, charH);
+    ctx.restore();
+  }
+}
+
+// ══════════════════════════════════════════════════════
+// TEXTE FLOTTANT (déclenché par mouth trigger)
+// ══════════════════════════════════════════════════════
+
+function drawText(W, H, now) {
+  if (!textVisible || headX < 0) return;
+  const elapsed = now - textStartTime;
+
+  // Spring scale : 0 → 1.1 → 1.0
+  let sc = 1.0;
+  if (elapsed < 400) sc = cubicBezier(elapsed / 400, 0.34, 1.56, 0.64, 1.0);
+
+  // Fade out à partir de TEXT_FADE ms
+  const alpha = elapsed > TEXT_FADE
+    ? Math.max(0, 1 - (elapsed - TEXT_FADE) / (TEXT_GONE - TEXT_FADE))
+    : 1;
+
+  ctx.save();
+  ctx.globalAlpha = alpha;
+  ctx.translate(headX, headY - 24);
+  ctx.scale(sc, sc);
+
+  ctx.font         = `800 28px 'Poppins', sans-serif`;
+  ctx.textAlign    = 'center';
+  ctx.textBaseline = 'bottom';
+  ctx.lineJoin     = 'round';
+  ctx.strokeStyle  = '#000';
+  ctx.lineWidth    = 3;
+  ctx.strokeText('Grimace Shake · Le 119', 0, 0);
+  ctx.fillStyle    = '#FFC72C';
+  ctx.fillText('Grimace Shake · Le 119', 0, 0);
+  ctx.restore();
+}
+
+// Implémentation numérique du cubic-bezier (bisection)
+function cubicBezier(t, x1, y1, x2, y2) {
+  const B  = u => { const v = 1-u; return 3*v*v*u*y1 + 3*v*u*u*y2 + u*u*u; };
+  const Bx = u => { const v = 1-u; return 3*v*v*u*x1 + 3*v*u*u*x2 + u*u*u; };
+  let lo = 0, hi = 1, u = t;
+  for (let i = 0; i < 8; i++) {
+    const m = (lo + hi) / 2;
+    if (Bx(m) < t) lo = m; else hi = m;
+    u = m;
+  }
+  return B(u);
+}
+
+// ══════════════════════════════════════════════════════
+// CAPTURE PHOTO
+// ══════════════════════════════════════════════════════
+
+function captureSnapshot() {
+  const snap = document.createElement('canvas');
+  snap.width  = canvas.width;
+  snap.height = canvas.height;
+  const sc = snap.getContext('2d');
+
+  // Vidéo miroir (reflipper pour le snapshot)
+  sc.save();
+  sc.translate(snap.width, 0);
+  sc.scale(-1, 1);
+  sc.drawImage(video, 0, 0, snap.width, snap.height);
+  sc.restore();
+
+  // Overlays canvas
+  sc.drawImage(canvas, 0, 0);
+
+  // Logo coin bas gauche
+  if (logoImg) {
+    const lH = 40, lW = lH * (logoImg.width / logoImg.height);
+    sc.drawImage(logoImg, 16, snap.height - lH - 16, lW, lH);
+  }
+
+  const a  = document.createElement('a');
+  a.href   = snap.toDataURL('image/png');
+  a.download = 'grimace-shake-119.png';
+  a.click();
+
+  shareOverlay.classList.add('visible');
+  setTimeout(() => shareOverlay.classList.remove('visible'), 1500);
+  console.log('[Capture] Photo téléchargée');
+}
+
+// ══════════════════════════════════════════════════════
+// GESTION ERREURS
+// ══════════════════════════════════════════════════════
+
+function showErrorScreen(err) {
+  const msg  = document.getElementById('error-msg');
+  const icon = document.getElementById('error-icon');
+  if (err?.name === 'NotAllowedError') {
+    icon.textContent = '🔒';
+    msg.textContent  = 'Accès caméra refusé.\nVa dans Réglages → Safari/Chrome → Caméra, puis autorise ce site.';
+  } else if (!navigator.mediaDevices?.getUserMedia) {
+    icon.textContent = '🌐';
+    msg.textContent  = 'Navigateur incompatible.\nOuvre ce lien dans Safari (iOS) ou Chrome (Android).';
+  } else {
+    msg.textContent = 'Impossible d\'accéder à la caméra.\nVérifie que Safari ou Chrome est utilisé et que la caméra n\'est pas occupée.';
+  }
+  showScreen('error');
+}
+
+// ══════════════════════════════════════════════════════
+// ÉCOUTEURS D'ÉVÉNEMENTS
+// ══════════════════════════════════════════════════════
+
+btnStart.addEventListener('click', () => {
+  if (!assetsReady) return;
+  startAR();
+});
+
+btnRetry.addEventListener('click', () => showScreen('home'));
+
+btnCapture.addEventListener('click', captureSnapshot);
+
+btnMute.addEventListener('click', () => {
+  isMuted = !isMuted;
+  btnMute.textContent = isMuted ? '🔇' : '🔊';
+  console.log('[Mute]', isMuted ? 'Son coupé' : 'Son activé');
+});
+
+shareOverlay.addEventListener('click', () =>
+  shareOverlay.classList.remove('visible')
+);
+
+// ══════════════════════════════════════════════════════
+// INIT
+// ══════════════════════════════════════════════════════
+
+(async () => {
+  if (!navigator.mediaDevices?.getUserMedia) {
+    showErrorScreen({ name: 'NotSupported' });
+    return;
+  }
+  await loadAssets();
+  showScreen('home');
+})();
+</script>
+</body>
+</html>
